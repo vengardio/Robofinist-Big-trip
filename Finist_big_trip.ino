@@ -11,8 +11,8 @@
 #define POWERL 75
 #define POWERR 75
 
-long prevtime; //время после предыдущего поворота
-int timeDrive; //время проезда в одну сторону. Регламентируется потенциометром
+long prevtime;  //время после предыдущего поворота
+int timeDrive;  //время проезда в одну сторону. Регламентируется потенциометром
 bool BoolLineL, BoolLineR, BoolLineLPrev;
 
 void setup() {
@@ -62,10 +62,16 @@ void Right() {
   analogWrite(ENB, POWERL);
 }
 
-void Rotation() {
-  while (not(BoolLineLPrev == 1 and BoolLineL == 0)) {
-    Left();
-  }
+void LinesUpdate() {
+  BoolLineLPrev = BoolLineL;
+  if (analogRead(LINEL) >= 350) BoolLineL = true;  //===Left pin===
+  if (analogRead(LINER) >= 500) BoolLineR = true;  //===Right pin===
+  if (analogRead(LINEL) < 350) BoolLineL = false;
+  if (analogRead(LINER) < 500) BoolLineR = false;
+  Serial.print("Left: "); Serial.print(analogRead(LINEL));
+  Serial.print(" BLeft: "); Serial.print(BoolLineL);
+  Serial.print(" Right: "); Serial.print(analogRead(LINER));
+  Serial.print(" BRight: "); Serial.println(BoolLineR);
 }
 
 void NeedTurn() {
@@ -77,29 +83,29 @@ void NeedTurn() {
       Right();
     }
     if (BoolLineL == 1 and BoolLineR == 1) {
-      Left();
-      delay(100);
       driveForward();
       delay(100);
+      Left();
+      delay(100);
     }
+    LinesUpdate();
   }
 }
 
 void loop() {
   timeDrive = map(analogRead(POT), 0, 1023, 2500, 4000);
-  if (analogRead(LINEL) >= 400) BoolLineL = true;  //===Left pin===
-  if (analogRead(LINER) >= 600) BoolLineR = true;  //===Right pin===
-  if (analogRead(LINEL) < 400) BoolLineL = false;
-  if (analogRead(LINER) < 600) BoolLineR = false;
+  LinesUpdate();
 
   if (millis() - prevtime < timeDrive) {  //движение робота вперёд на протяжении времени, регламентируемом потенциометром
     driveForward();
     NeedTurn();
   } else {
     NeedTurn();
-    rotation();
+    while (not(BoolLineLPrev == 1 and BoolLineL == 0)) {
+      Left();
+      LinesUpdate();
+    }
     driveForward();
     prevtime = millis();  //робот проехал полный цикл. Обновляется
   }
-  BoolLineLPrev = BoolLineL;
 }
