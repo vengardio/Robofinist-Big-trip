@@ -8,15 +8,15 @@
 #define LINER A5  //Левый датчик линии
 #define POT A4    //Потенциометр
 
-#define POWERL 75
-#define POWERR 75
+#define POWERL 93
+#define POWERR 93
 
 long prevtime;  //время после предыдущего поворота
 int timeDrive;  //время проезда в одну сторону. Регламентируется потенциометром
 bool BoolLineL, BoolLineR, BoolLineLPrev;
 
 void setup() {
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
   pinMode(ENA, OUTPUT);
   pinMode(ENB, OUTPUT);
@@ -49,8 +49,8 @@ void Left() {
   digitalWrite(IN2, 0);
   digitalWrite(IN3, 0);
   digitalWrite(IN4, 1);
-  analogWrite(ENA, POWERR);
-  analogWrite(ENB, POWERL);
+  analogWrite(ENA, POWERR-10);
+  analogWrite(ENB, POWERL-10);
 }
 
 void Right() {
@@ -58,8 +58,8 @@ void Right() {
   digitalWrite(IN2, 1);
   digitalWrite(IN3, 1);
   digitalWrite(IN4, 0);
-  analogWrite(ENA, POWERR);
-  analogWrite(ENB, POWERL);
+  analogWrite(ENA, POWERR-10);
+  analogWrite(ENB, POWERL-10);
 }
 
 void LinesUpdate() {
@@ -68,10 +68,12 @@ void LinesUpdate() {
   if (analogRead(LINER) >= 500) BoolLineR = true;  //===Right pin===
   if (analogRead(LINEL) < 350) BoolLineL = false;
   if (analogRead(LINER) < 500) BoolLineR = false;
+  /*
   Serial.print("Left: "); Serial.print(analogRead(LINEL));
   Serial.print(" BLeft: "); Serial.print(BoolLineL);
   Serial.print(" Right: "); Serial.print(analogRead(LINER));
   Serial.print(" BRight: "); Serial.println(BoolLineR);
+  */
 }
 
 void NeedTurn() {
@@ -84,16 +86,13 @@ void NeedTurn() {
     }
     if (BoolLineL == 1 and BoolLineR == 1) {
       driveForward();
-      delay(100);
-      Left();
-      delay(100);
     }
     LinesUpdate();
   }
 }
 
 void loop() {
-  timeDrive = map(analogRead(POT), 0, 1023, 2500, 4000);
+  timeDrive = map(analogRead(POT), 0, 1023, 1500, 4000);
   LinesUpdate();
 
   if (millis() - prevtime < timeDrive) {  //движение робота вперёд на протяжении времени, регламентируемом потенциометром
