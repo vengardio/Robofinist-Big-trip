@@ -7,14 +7,17 @@
 #define LINEL A6  //Левый датчик линии
 #define LINER A5  //Левый датчик линии
 #define POT A4    //Потенциометр
-long prevtime = millis();
-int timeDrive, powerL, powerR;
-bool BoolLineL, BoolLineR;
 
+#define POWERL 75
+#define POWERR 75
+
+long prevtime; //время после предыдущего поворота
+int timeDrive; //время проезда в одну сторону. Регламентируется потенциометром
+bool BoolLineL, BoolLineR, BoolLineLPrev;
 
 void setup() {
   Serial.begin(9600);
-  // Установка всех управляющих пинов в режим выхода
+
   pinMode(ENA, OUTPUT);
   pinMode(ENB, OUTPUT);
   pinMode(IN1, OUTPUT);
@@ -24,23 +27,21 @@ void setup() {
   pinMode(LINEL, INPUT);
   pinMode(LINER, INPUT);
   pinMode(POT, INPUT);
-  // Команда остановки двум моторам
+
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
   prevtime = millis();
-  powerL = 75;
-  powerR = 75;
 }
 
-void driveForward() {  //g
+void driveForward() {
   digitalWrite(IN1, 1);
   digitalWrite(IN2, 0);
   digitalWrite(IN3, 1);
   digitalWrite(IN4, 0);
-  analogWrite(ENA, powerR);
-  analogWrite(ENB, powerL);
+  analogWrite(ENA, POWERR);
+  analogWrite(ENB, POWERL);
 }
 
 void Left() {
@@ -48,8 +49,8 @@ void Left() {
   digitalWrite(IN2, 0);
   digitalWrite(IN3, 0);
   digitalWrite(IN4, 1);
-  analogWrite(ENA, powerR);
-  analogWrite(ENB, powerL);
+  analogWrite(ENA, POWERR);
+  analogWrite(ENB, POWERL);
 }
 
 void Right() {
@@ -57,12 +58,35 @@ void Right() {
   digitalWrite(IN2, 1);
   digitalWrite(IN3, 1);
   digitalWrite(IN4, 0);
-  analogWrite(ENA, powerR);
-  analogWrite(ENB, powerL);
+  analogWrite(ENA, POWERR);
+  analogWrite(ENB, POWERL);
+}
+
+void Rotation() {
+  while (not(BoolLineLPrev == 1 and BoolLineL == 0)) {
+    Left();
+  }
+}
+
+void NeedTurn() {
+  while (BoolLineL == 1 or BoolLineR == 1) {
+    if (BoolLineL == 1 and BoolLineR == 0) {
+      Left();
+    }
+    if (BoolLineL == 0 and BoolLineR == 1) {
+      Right();
+    }
+    if (BoolLineL == 1 and BoolLineR == 1) {
+      Left();
+      delay(100);
+      driveForward();
+      delay(100);
+    }
+  }
 }
 
 void loop() {
-  timeDrive = map(analogRead(POT), 0, 1023, 1000, 3000);
+  timeDrive = map(analogRead(POT), 0, 1023, 2500, 4000);
   if (analogRead(LINEL) >= 400) BoolLineL = true;  //===Left pin===
   if (analogRead(LINER) >= 600) BoolLineR = true;  //===Right pin===
   if (analogRead(LINEL) < 400) BoolLineL = false;
@@ -70,20 +94,12 @@ void loop() {
 
   if (millis() - prevtime < timeDrive) {  //движение робота вперёд на протяжении времени, регламентируемом потенциометром
     driveForward();
-    if (BoolLineL == 1 and BoolLineR == 0) {
-      Left();
-    }
-    if (BoolLineR == 1 and BoolLineL == 0) {
-      Right();
-    }
+    NeedTurn();
   } else {
-    Left();
-    delay(500);
-    digitalWrite(IN1, 0);
-    digitalWrite(IN2, 0);
-    digitalWrite(IN3, 0);
-    digitalWrite(IN4, 0);
+    NeedTurn();
+    rotation();
     driveForward();
     prevtime = millis();  //робот проехал полный цикл. Обновляется
   }
+  BoolLineLPrev = BoolLineL;
 }
